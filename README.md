@@ -1,7 +1,7 @@
 # ultron-cli
 Command-line interface to interact with Ultron API
 
-```
+```bash
 ~ ultron --help
 
 usage: ultron [--version] [-v | -q] [--log-file LOG_FILE] [-h] [--debug]
