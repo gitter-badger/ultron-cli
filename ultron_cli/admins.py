@@ -217,7 +217,7 @@ class GetInventories(Lister):
     def take_action(self, p):
         params = {'dynfields': 'inventories', 'fields': 'name'}
         if len(p.admins) > 0:
-            params['admins'] = ','.join(p.admins)
+            params['adminnames'] = ','.join(p.admins)
 
         url = '{}/admins'.format(session.endpoint)
         result = requests.get(url, params=params, verify=session.certfile,
