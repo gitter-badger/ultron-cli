@@ -14,7 +14,7 @@ with open(sessionfile) as f: session = AttrDict(json.load(f))
 
 
 class List(Lister):
-    "List groups"
+    "List all groups in inventory"
 
     log = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ class List(Lister):
         raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
 
 class Show(ShowOne):
-    "Show group"
+    "Show details of a group"
 
     log = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class Show(ShowOne):
 
 
 class New(Command):
-    "New groups"
+    "Create new groups in inventory"
 
     log = logging.getLogger(__name__)
 
@@ -120,7 +120,7 @@ class New(Command):
 
 
 class Update(Command):
-    "Update groups"
+    "Update existing groups in inventory"
 
     log = logging.getLogger(__name__)
 
@@ -173,7 +173,7 @@ class Update(Command):
 
 
 class Delete(Command):
-    "Delete groups"
+    "Delete groups from inventory"
 
     log = logging.getLogger(__name__)
 
@@ -206,5 +206,4 @@ class Delete(Command):
             print('SUCCESS: Deleted groups')
         else:
             raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
-
 

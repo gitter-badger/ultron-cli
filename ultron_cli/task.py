@@ -10,7 +10,7 @@ sessionfile = os.path.expanduser('~/.ultron_session.json')
 with open(sessionfile) as f: session = AttrDict(json.load(f))
 
 class Submit(Command):
-    "Submit task"
+    "Submit a task for all/selected clients/groups in inventory"
 
     log = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class Submit(Command):
         parser.add_argument('-G', '--groups', nargs='*', default=[])
         parser.add_argument('-C', '--clients', nargs='*', default=[])
         parser.add_argument('-S', '--synchronous', action='store_true')
-        parser.add_argument('-K', '--kwargs', type=json.loads, help='BSON encoded key-value pairs')
+        parser.add_argument('-K', '--kwargs', type=json.loads, help='BSON encoded key-value pairs', default={})
         return parser
 
     def take_action(self, p):
@@ -37,6 +37,8 @@ class Submit(Command):
             data['groupnames'] = ','.join(p.groups)
             params['groupnames'] = ','.join(p.groups)
         if len(p.kwargs) > 0:
+            if not isinstance(p.kwargs, dict):
+                raise RuntimeError('kwargs: Must be BSON encoded key-value pairs')
             data['kwargs'] = json.dumps(p.kwargs)
 
         result = requests.get(url, params=params, verify=session.certfile)

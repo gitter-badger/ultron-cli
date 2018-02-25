@@ -67,7 +67,7 @@ class Connect(Command):
 
 
 class Disconnect(Command):
-    "Destroy session"
+    "Disconnect and destroy session"
 
     log = logging.getLogger(__name__)
 

@@ -14,7 +14,7 @@ with open(sessionfile) as f: session = AttrDict(json.load(f))
 
 
 class List(Lister):
-    "List admins"
+    "List all admins"
 
     log = logging.getLogger(__name__)
 
@@ -65,7 +65,7 @@ class Show(ShowOne):
 
 
 class New(Command):
-    "New admins"
+    "Add new admins"
 
     log = logging.getLogger(__name__)
 
@@ -114,7 +114,7 @@ class New(Command):
 
 
 class Update(Command):
-    "Update admins"
+    "Update details of existing admins"
 
     log = logging.getLogger(__name__)
 
@@ -193,7 +193,7 @@ class Delete(Command):
 
 
 class ListTasks(Lister):
-    "List allowed tasks"
+    "List allowed tasks of an admin"
 
     log = logging.getLogger(__name__)
 
@@ -220,7 +220,7 @@ class ListTasks(Lister):
 
 
 class ListInventories(Lister):
-    "List created inventories"
+    "List created inventories by an admin"
 
     log = logging.getLogger(__name__)
 
