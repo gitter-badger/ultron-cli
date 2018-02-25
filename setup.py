@@ -83,6 +83,12 @@ setup(
             'update clients = ultron_cli.clients:Update',
             'delete clients = ultron_cli.clients:Delete',
             'perform on clients = ultron_cli.clients:Perform',
+            'stat client tasks = ultron_cli.clients:StatTasks',
+            'filter client task = ultron_cli.clients:FilterTask',
+            'filter client state = ultron_cli.clients:FilterState',
+            'filter client prop = ultron_cli.clients:FilterProp',
+            'stat client states = ultron_cli.clients:StatStates',
+            'stat client props = ultron_cli.clients:StatProps',
             'show client = ultron_cli.clients:Show'
         ]
     },

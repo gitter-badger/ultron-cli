@@ -252,3 +252,244 @@ class Perform(Command):
             return
         raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
 
+
+class StatTasks(ShowOne):
+    "Show statistics of a performed tasks"
+
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+        parser = super(StatTasks, self).get_parser(prog_name)
+        parser.add_argument('tasks', nargs='*', default=[])
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
+        return parser
+
+    def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
+        url = '{}/clients/{}/{}'.format(session.endpoint, p.admin, p.inventory)
+
+        result = requests.get(url, verify=session.certfile)
+        if result.status_code != requests.codes.ok:
+            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+
+        clients = result.json().get('result', {})
+
+        if len(clients) == 0:
+            raise RuntimeError('ERROR: Clients not found')
+
+        tasks = {}
+        for client in clients.values():
+            if not client['tasks']: continue
+            for k, v in client['tasks'].items():
+                if len(p.tasks) > 0 and k not in p.tasks: continue
+                if k not in tasks:
+                    tasks[k] = {
+                        'performed on': 0, 'success': 0,
+                        'failed': 0, 'pending': 0
+                    }
+                tasks[k]['performed on'] += 1
+                tasks[k][v['status'].lower()] += 1
+
+        return [tasks.keys(), tasks.values()]
+
+
+class StatStates(ShowOne):
+    "Show statistics of a client states"
+
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+        parser = super(StatStates, self).get_parser(prog_name)
+        parser.add_argument('states', nargs='*', default=[])
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
+        return parser
+
+    def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
+        url = '{}/clients/{}/{}'.format(session.endpoint, p.admin, p.inventory)
+
+        result = requests.get(url, verify=session.certfile)
+        if result.status_code != requests.codes.ok:
+            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+
+        clients = result.json().get('result', {})
+
+        if len(clients) == 0:
+            raise RuntimeError('ERROR: Clients not found')
+
+        states = {}
+        for client in clients.values():
+            for k, v in client['state'].items():
+                if len(p.states) > 0 and k not in p.states: continue
+                if k not in states: states[k] = {}
+                if v not in states[k]: states[k][v] = 0
+                states[k][v] += 1
+
+        for k,v in states.items():
+            if len(v) > 15:
+                del states[k]
+        return [states.keys(), states.values()]
+
+
+class StatProps(ShowOne):
+    "Show statistics of a client props"
+
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+        parser = super(StatProps, self).get_parser(prog_name)
+        parser.add_argument('props', nargs='*', default=[])
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
+        return parser
+
+    def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
+        url = '{}/clients/{}/{}'.format(session.endpoint, p.admin, p.inventory)
+
+        result = requests.get(url, verify=session.certfile)
+        if result.status_code != requests.codes.ok:
+            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+
+        clients = result.json().get('result', {})
+
+        if len(clients) == 0:
+            raise RuntimeError('ERROR: Clients not found')
+
+        props = {}
+        for client in clients.values():
+            for k, v in client['props'].items():
+                if len(p.props) > 0 and k not in p.props: continue
+                if k not in props: props[k] = {}
+                if v not in props[k]: props[k][v] = 0
+                props[k][v] += 1
+
+        for k,v in props.items():
+            if len(v) > 15:
+                del props[k]
+        return [props.keys(), props.values()]
+
+
+class FilterTask(Lister):
+    "List clients filtered by task status"
+
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+        parser = super(FilterTask, self).get_parser(prog_name)
+        parser.add_argument('task')
+        parser.add_argument('value')
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
+        return parser
+
+    def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
+        url = '{}/clients/{}/{}'.format(session.endpoint, p.admin, p.inventory)
+
+        result = requests.get(url, verify=session.certfile)
+        if result.status_code != requests.codes.ok:
+            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+
+        clients = result.json().get('result', {})
+
+        if len(clients) == 0:
+            raise RuntimeError('ERROR: Clients not found')
+
+        found = set()
+        for client in clients.values():
+            if not client['tasks']: continue
+            if client['tasks'][p.task]['status'] != p.value.upper():
+                if p.value == 'performed on':
+                    found.add(client['name'])
+                    continue
+                continue
+            found.add(client['name'])
+
+        return [['name'], [[x] for x in found]]
+
+
+class FilterState(Lister):
+    "List clients filtered by state"
+
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+        parser = super(FilterState, self).get_parser(prog_name)
+        parser.add_argument('state')
+        parser.add_argument('value')
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
+        return parser
+
+    def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
+        url = '{}/clients/{}/{}'.format(session.endpoint, p.admin, p.inventory)
+
+        result = requests.get(url, verify=session.certfile)
+        if result.status_code != requests.codes.ok:
+            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+
+        clients = result.json().get('result', {})
+
+        if len(clients) == 0:
+            raise RuntimeError('ERROR: Clients not found')
+
+        found = set()
+        for client in clients.values():
+            if p.state not in client['state']: continue
+            if str(client['state'][p.state]) != p.value:
+                    continue
+            found.add(client['name'])
+
+        return [['name'], [[x] for x in found]]
+
+
+class FilterProp(Lister):
+    "List clients filtered by prop"
+
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+        parser = super(FilterProp, self).get_parser(prog_name)
+        parser.add_argument('prop')
+        parser.add_argument('value')
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
+        return parser
+
+    def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
+        url = '{}/clients/{}/{}'.format(session.endpoint, p.admin, p.inventory)
+
+        result = requests.get(url, verify=session.certfile)
+        if result.status_code != requests.codes.ok:
+            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+
+        clients = result.json().get('result', {})
+
+        if len(clients) == 0:
+            raise RuntimeError('ERROR: Clients not found')
+
+        found = set()
+        for client in clients.values():
+            if p.prop not in client['props']: continue
+            if str(client['props'][p.prop]) != p.value:
+                    continue
+            found.add(client['name'])
+
+        return [['name'], [[x] for x in found]]
