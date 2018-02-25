@@ -5,43 +5,66 @@ import requests
 from attrdict import AttrDict
 from cliff.lister import Lister
 from cliff.command import Command
+from cliff.show import ShowOne
 from prompt_toolkit import prompt
+
 
 sessionfile = os.path.expanduser('~/.ultron_session.json')
 with open(sessionfile) as f: session = AttrDict(json.load(f))
 
-class Get(Lister):
-    "Get groups"
+
+class List(Lister):
+    "List groups"
 
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
-        parser = super(Get, self).get_parser(prog_name)
-        parser.add_argument('groups', nargs='*', default=[])
-        parser.add_argument('-a', '--admin', default=session.username)
-        parser.add_argument('-i', '--inventory', default=session.inventory)
+        parser = super(List, self).get_parser(prog_name)
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
+        return parser
+
+    def take_action(self, p):
+        url = '{}/groups/{}/{}'.format(session.endpoint, p.admin, p.inventory)
+        result = requests.get(url, params={'fields': 'name'}, verify=session.certfile,
+                              auth=(session.username, session.password))
+
+        if result.status_code == requests.codes.ok:
+            groups = result.json().get('result', {})
+            if len(groups) == 0:
+                raise RuntimeError('ERROR: Groups not found')
+            cols = ['name']
+            rows = [[x] for x in groups.keys()]
+            return [cols, rows]
+        raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+
+class Show(ShowOne):
+    "Show group"
+
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        parser = super(Show, self).get_parser(prog_name)
+        parser.add_argument('group')
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
         parser.add_argument('-F', '--fields', nargs='*', default=[])
         return parser
 
     def take_action(self, p):
         params = {}
-        if len(p.groups) > 0:
-            params['groupnames'] = ','.join(p.groups)
         if len(p.fields) > 0:
             params['fields'] = ','.join(p.fields)
 
-        url = '{}/groups/{}/{}'.format(session.endpoint, p.admin, p.inventory)
+        url = '{}/groups/{}/{}/{}'.format(session.endpoint, p.admin, p.inventory, p.group)
         result = requests.get(url, params=params, verify=session.certfile)
 
         if result.status_code == requests.codes.ok:
-            groups = result.json().get('result', {})
-            if len(groups) == 0:
-                raise RuntimeError('ERROR: groups not found')
-            cols = list(groups.values())[0].keys()
-            rows = [[x[c] for c in cols] for x in groups.values()]
-            return [cols, rows]
-        else:
-            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+            group = result.json().get('result',{}).get(p.group)
+            if not group:
+                raise RuntimeError('ERROR: group not found')
+            return [group.keys(), group.values()]
+        raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
 
 
 class New(Command):
@@ -52,16 +75,16 @@ class New(Command):
     def get_parser(self, prog_name):
         parser = super(New, self).get_parser(prog_name)
         parser.add_argument('groups', nargs='*', default=[])
-        parser.add_argument('-a', '--admin', default=session.username)
-        parser.add_argument('-i', '--inventory', default=session.inventory)
-        parser.add_argument('-c', '--clients', nargs='*')
-        parser.add_argument('-d', '--description', default='')
-        parser.add_argument('-p', '--props', nargs='*', default=[])
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
+        parser.add_argument('-C', '--clients', nargs='*')
+        parser.add_argument('-D', '--description', default='')
+        parser.add_argument('-P', '--props', nargs='*', default=[])
         return parser
 
     def take_action(self, p):
         if len(p.groups) == 0:
-            groupnames = prompt('Enter hostnames and press ESC+ENTER\n> ', multiline=True).split()
+            groupnames = prompt('Enter group names and press ESC+ENTER\n> ', multiline=True).splitlines()
         else:
             groupnames = p.groups
 
@@ -104,12 +127,12 @@ class Update(Command):
     def get_parser(self, prog_name):
         parser = super(Update, self).get_parser(prog_name)
         parser.add_argument('groups', nargs='*', default=[])
-        parser.add_argument('-a', '--admin', default=session.username)
-        parser.add_argument('-i', '--inventory', default=session.inventory)
-        parser.add_argument('-c', '--clients', nargs='*', default=[])
-        parser.add_argument('-r', '--remove', action='store_true', default=False)
-        parser.add_argument('-d', '--description', default=None)
-        parser.add_argument('-p', '--props', nargs='*', default=[])
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
+        parser.add_argument('-C', '--clients', nargs='*', default=[])
+        parser.add_argument('-R', '--remove', action='store_true')
+        parser.add_argument('-D', '--description', default=None)
+        parser.add_argument('-P', '--props', nargs='*', default=[])
         return parser
 
     def take_action(self, p):
@@ -157,8 +180,8 @@ class Delete(Command):
     def get_parser(self, prog_name):
         parser = super(Delete, self).get_parser(prog_name)
         parser.add_argument('groups', nargs='*', default=[])
-        parser.add_argument('-a', '--admin', default=session.username)
-        parser.add_argument('-i', '--inventory', default=session.inventory)
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
         return parser
 
     def take_action(self, p):

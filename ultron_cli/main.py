@@ -1,13 +1,13 @@
 import sys
 import os
 import json
-
 from cliff.app import App
 from cliff.commandmanager import CommandManager
 from ultron_cli.config import VERSION
 
-class UltronCli(App):
 
+class UltronCli(App):
+    """ Cli for ultron API """
     def __init__(self):
         super(UltronCli, self).__init__(
             description='Command-line interface to interact with Ultron API',
@@ -26,7 +26,8 @@ class UltronCli(App):
                     'password': 'fakepass',
                     'endpoint': 'https://localhost:5050/api/v1.0',
                     'inventory': ''
-                }, f)
+                }, f, indent=4)
+            os.chmod(sessionfile, 0o600)
 
     def prepare_to_run_command(self, cmd):
         self.LOG.debug('prepare_to_run_command %s', cmd.__class__.__name__)

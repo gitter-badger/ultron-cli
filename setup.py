@@ -61,20 +61,23 @@ setup(
             'inventory = ultron_cli.session:DefaultInventory',
 
             'new admins = ultron_cli.admins:New',
-            'get admins = ultron_cli.admins:Get',
+            'list admins = ultron_cli.admins:List',
+            'show admin = ultron_cli.admins:Show',
             'update admins = ultron_cli.admins:Update',
             'delete admins = ultron_cli.admins:Delete',
 
-            'get tasks = ultron_cli.admins:GetTasks',
-            'get inventories = ultron_cli.admins:GetInventories',
+            'list tasks = ultron_cli.admins:ListTasks',
+            'list inventories = ultron_cli.admins:ListInventories',
 
             'new groups = ultron_cli.groups:New',
-            'get groups = ultron_cli.groups:Get',
+            'list groups = ultron_cli.groups:List',
+            'show group = ultron_cli.groups:Show',
             'update groups = ultron_cli.groups:Update',
             'delete groups = ultron_cli.groups:Delete',
 
             'new clients = ultron_cli.clients:New',
-            'get clients = ultron_cli.clients:Get',
+            'list clients = ultron_cli.clients:List',
+            'show client = ultron_cli.clients:Show',
             'update clients = ultron_cli.clients:Update',
             'delete clients = ultron_cli.clients:Delete',
 

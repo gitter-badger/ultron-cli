@@ -17,16 +17,16 @@ class Submit(Command):
     def get_parser(self, prog_name):
         parser = super(Submit, self).get_parser(prog_name)
         parser.add_argument('task')
-        parser.add_argument('-a', '--admin', default=session.username)
-        parser.add_argument('-i', '--inventory', default=session.inventory)
-        parser.add_argument('-g', '--groups', nargs='*', default=[])
-        parser.add_argument('-c', '--clients', nargs='*', default=[])
-        parser.add_argument('-A', '--async', action='store_true', default=True)
-        parser.add_argument('-k', '--kwargs', nargs='*', default=[])
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
+        parser.add_argument('-G', '--groups', nargs='*', default=[])
+        parser.add_argument('-C', '--clients', nargs='*', default=[])
+        parser.add_argument('-S', '--synchronous', action='store_true')
+        parser.add_argument('-K', '--kwargs', type=json.loads, help='BSON encoded key-value pairs')
         return parser
 
     def take_action(self, p):
-        data = {'async': int(p.async), 'task': p.task}
+        data = {'async': int(not p.synchronous), 'task': p.task}
         params = {'fields': 'name'}
         url = '{}/clients/{}/{}'.format(session.endpoint, p.admin, p.inventory)
         if len(p.clients) > 0:
@@ -37,12 +37,7 @@ class Submit(Command):
             data['groupnames'] = ','.join(p.groups)
             params['groupnames'] = ','.join(p.groups)
         if len(p.kwargs) > 0:
-            try:
-                data['kwargs'] = json.dumps({
-                    x.split('=')[0]: '='.join(x.split('=')[1:]) for x in p.kwargs
-                })
-            except:
-                raise RuntimeError('ERROR: Invalid kwargs format. Example format: a=123 b=\'{"a": "A"}\' c=\'["a", 1, true]\'')
+            data['kwargs'] = json.dumps(p.kwargs)
 
         result = requests.get(url, params=params, verify=session.certfile)
 

@@ -5,45 +5,63 @@ import requests
 from attrdict import AttrDict
 from cliff.lister import Lister
 from cliff.command import Command
+from cliff.show import ShowOne
 from prompt_toolkit import prompt
+
 
 sessionfile = os.path.expanduser('~/.ultron_session.json')
 with open(sessionfile) as f: session = AttrDict(json.load(f))
 
-class Get(Lister):
-    "Get admins"
+
+class List(Lister):
+    "List admins"
 
     log = logging.getLogger(__name__)
 
-    def get_parser(self, prog_name):
-        parser = super(Get, self).get_parser(prog_name)
-        parser.add_argument('admins', nargs='*', default=[])
-        parser.add_argument('-F', '--fields', nargs='*', default=[])
-        parser.add_argument('-D', '--dynfields', nargs='*', default=[])
-        return parser
-
     def take_action(self, p):
-        params = {}
-        if len(p.admins) > 0:
-            params['adminnames'] = ','.join(p.admins)
-        if len(p.fields) > 0:
-            params['fields'] = ','.join(p.fields)
-        if len(p.dynfields) > 0:
-            params['dynfields'] = ','.join(p.dynfields)
-
         url = '{}/admins'.format(session.endpoint)
-        result = requests.get(url, params=params, verify=session.certfile,
+        result = requests.get(url, params={'fields': 'name'}, verify=session.certfile,
                               auth=(session.username, session.password))
 
         if result.status_code == requests.codes.ok:
             admins = result.json().get('result', {})
             if len(admins) == 0:
                 raise RuntimeError('ERROR: Admins not found')
-            cols = list(admins.values())[0].keys()
-            rows = [[x[c] for c in cols] for x in admins.values()]
+            cols = ['name']
+            rows = [[x] for x in admins.keys()]
             return [cols, rows]
-        else:
-            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+        raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+
+
+class Show(ShowOne):
+    "Show details of an admin"""
+
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        parser = super(Show, self).get_parser(prog_name)
+        parser.add_argument('admin')
+        parser.add_argument('-F', '--fields', nargs='*', default=[])
+        parser.add_argument('-D', '--dynfields', nargs='*', default=[])
+        return parser
+
+    def take_action(self, p):
+        params = {}
+        if len(p.fields) > 0:
+            params['fields'] = ','.join(p.fields)
+        if len(p.dynfields) > 0:
+            params['dynfields'] = ','.join(p.dynfields)
+
+        url = '{}/admins/{}'.format(session.endpoint, p.admin)
+        result = requests.get(url, params=params, verify=session.certfile,
+                              auth=(session.username, session.password))
+
+        if result.status_code == requests.codes.ok:
+            admin = result.json().get('result',{}).get(p.admin)
+            if not admin:
+                raise RuntimeError('ERROR: Admin not found')
+            return [admin.keys(), admin.values()]
+        raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
 
 
 class New(Command):
@@ -54,8 +72,8 @@ class New(Command):
     def get_parser(self, prog_name):
         parser = super(New, self).get_parser(prog_name)
         parser.add_argument('admins', nargs='*')
-        parser.add_argument('-P', '--password', default=None)
-        parser.add_argument('-p', '--props', nargs='*', default=[])
+        parser.add_argument('-p', '--password', default=None)
+        parser.add_argument('-P', '--props', nargs='*', default=[])
         return parser
 
     def take_action(self, p):
@@ -91,8 +109,8 @@ class New(Command):
 
         if result.status_code == requests.codes.ok:
             print('SUCCESS: Created new admins')
-        else:
-            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+            return
+        raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
 
 
 class Update(Command):
@@ -103,8 +121,8 @@ class Update(Command):
     def get_parser(self, prog_name):
         parser = super(Update, self).get_parser(prog_name)
         parser.add_argument('admins', nargs='*', default=[])
-        parser.add_argument('-P', '--password', default=None)
-        parser.add_argument('-p', '--props', nargs='*', default=[])
+        parser.add_argument('-p', '--password', default=None)
+        parser.add_argument('-P', '--props', nargs='*', default=[])
         return parser
 
     def take_action(self, p):
@@ -136,8 +154,8 @@ class Update(Command):
 
         if result.status_code == requests.codes.ok:
             print('SUCCESS: Updated admins')
-        else:
-            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+            return
+        raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
 
 
 class Delete(Command):
@@ -170,65 +188,59 @@ class Delete(Command):
 
         if result.status_code == requests.codes.ok:
             print('SUCCESS: Deleted admins')
-        else:
-            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+            return
+        raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
 
 
-class GetTasks(Lister):
-    "Get allowed tasks"
+class ListTasks(Lister):
+    "List allowed tasks"
 
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
-        parser = super(GetTasks, self).get_parser(prog_name)
-        parser.add_argument('admins', nargs='*', default=[])
+        parser = super(ListTasks, self).get_parser(prog_name)
+        parser.add_argument('admin')
         return parser
 
     def take_action(self, p):
         params = {'dynfields': 'allowed_tasks', 'fields': 'name'}
-        if len(p.admins) > 0:
-            params['admins'] = ','.join(p.admins)
 
-        url = '{}/admins'.format(session.endpoint)
+        url = '{}/admins/{}'.format(session.endpoint, p.admin)
         result = requests.get(url, params=params, verify=session.certfile,
                               auth=(session.username, session.password))
 
         if result.status_code == requests.codes.ok:
-            admins = result.json().get('result', {})
-            if len(admins) == 0:
-                raise RuntimeError('ERROR: Admins not found')
-            cols = list(admins.values())[0].keys()
-            rows = [[x[c] for c in cols] for x in admins.values()]
+            admin = result.json().get('result',{}).get(p.admin)
+            if not admin:
+                raise RuntimeError('ERROR: Admin not found')
+            cols = ['allowed_tasks']
+            rows = [[x] for x in admin['allowed_tasks']]
             return [cols, rows]
-        else:
-            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+        raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
 
 
-class GetInventories(Lister):
-    "Get created inventories"
+class ListInventories(Lister):
+    "List created inventories"
 
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
-        parser = super(GetInventories, self).get_parser(prog_name)
-        parser.add_argument('admins', nargs='*', default=[])
+        parser = super(ListInventories, self).get_parser(prog_name)
+        parser.add_argument('admin')
         return parser
 
     def take_action(self, p):
         params = {'dynfields': 'inventories', 'fields': 'name'}
-        if len(p.admins) > 0:
-            params['adminnames'] = ','.join(p.admins)
 
-        url = '{}/admins'.format(session.endpoint)
+        url = '{}/admins/{}'.format(session.endpoint, p.admin)
         result = requests.get(url, params=params, verify=session.certfile,
                               auth=(session.username, session.password))
 
         if result.status_code == requests.codes.ok:
-            admins = result.json().get('result', {})
-            if len(admins) == 0:
-                raise RuntimeError('ERROR: Admins not found')
-            cols = list(admins.values())[0].keys()
-            rows = [[x[c] for c in cols] for x in admins.values()]
+            admin = result.json().get('result',{}).get(p.admin)
+            if not admin:
+                raise RuntimeError('ERROR: Admin not found')
+            cols = ['inventories']
+            rows = [[x] for x in admin['inventories']]
             return [cols, rows]
-        else:
-            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+        raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))

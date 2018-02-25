@@ -82,15 +82,11 @@ class DefaultInventory(Command):
 
     def get_parser(self, prog_name):
         parser = super(DefaultInventory, self).get_parser(prog_name)
-        parser.add_argument('inventory', default=None)
+        parser.add_argument('inventory')
         return parser
 
     def take_action(self, parsed):
-        if parsed.inventory is None:
-            session['inventory'] = prompt('Enter default inventory: ', default=session.inventory)
-        else:
-            session['inventory'] == parsed.inventory
-
+        session['inventory'] = parsed.inventory
         with open(sessionfile, 'w') as f:
-            json.dump(session, f)
+            json.dump(session, f, indent=4)
         self.log.info('Default inventory is set as: '+session['inventory'])
