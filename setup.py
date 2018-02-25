@@ -24,7 +24,7 @@ setup(
     author_email='sayanarijit@gmail.com',
 
     url='https://github.com/rapidstack/ultron-cli',
-    download_url='https://github.com/rapidstack/ultron-cli/archive/{}.tar.gz'.format(VERSION),
+    # download_url='https://github.com/rapidstack/ultron-cli/archive/{}.tar.gz'.format(VERSION),
 
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -74,15 +74,14 @@ setup(
             'show group = ultron_cli.groups:Show',
             'update groups = ultron_cli.groups:Update',
             'delete groups = ultron_cli.groups:Delete',
+            'group perform = ultron_cli.groups:Perform',
 
             'new clients = ultron_cli.clients:New',
             'list clients = ultron_cli.clients:List',
             'show client = ultron_cli.clients:Show',
             'update clients = ultron_cli.clients:Update',
             'delete clients = ultron_cli.clients:Delete',
-
-            'submit task = ultron_cli.task:Submit'
-            # 'stat task = ultron_cli.task:Stat'
+            'clients perform = ultron_cli.clients:Perform'
         ]
     },
 

@@ -8,7 +8,6 @@ from prompt_toolkit import prompt
 
 
 sessionfile = os.path.expanduser('~/.ultron_session.json')
-with open(sessionfile) as f: session = AttrDict(json.load(f))
 
 
 class Connect(Command):
@@ -26,6 +25,7 @@ class Connect(Command):
         return parser
 
     def take_action(self, parsed):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
 
         if not parsed.endpoint:
             endpoint = prompt('API endpoint: ', default=session.endpoint)
@@ -42,10 +42,13 @@ class Connect(Command):
         else:
             password = parsed.password
 
-        if parsed.inventory is None:
+        if not parsed.inventory:
             inventory = prompt('Enter default inventory: ', default=session.inventory)
         else:
             inventory = parsed.inventory
+
+        if not inventory:
+            raise RuntimeError('error: inventory: should not be empty')
 
         self.log.info('Connecting to {} as {}...'.format(endpoint, username))
 
@@ -86,6 +89,9 @@ class DefaultInventory(Command):
         return parser
 
     def take_action(self, parsed):
+        if not parsed.inventory:
+            raise RuntimeError('error: inventory: should not be empty')
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
         session['inventory'] = parsed.inventory
         with open(sessionfile, 'w') as f:
             json.dump(session, f, indent=4)

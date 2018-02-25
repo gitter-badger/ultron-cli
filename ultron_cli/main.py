@@ -6,8 +6,11 @@ from cliff.commandmanager import CommandManager
 from ultron_cli.config import VERSION
 
 
+sessionfile = os.path.expanduser('~/.ultron_session.json')
+
+
 class UltronCli(App):
-    """ Cli for ultron API """
+    "Command-line interface to interact with Ultron API"
     def __init__(self):
         super(UltronCli, self).__init__(
             description='Command-line interface to interact with Ultron API',
@@ -18,19 +21,18 @@ class UltronCli(App):
 
     def initialize_app(self, argv):
         self.LOG.debug('initialize_app')
-        sessionfile = os.path.expanduser('~/.ultron_session.json')
+
+    def prepare_to_run_command(self, cmd):
+        self.LOG.debug('prepare_to_run_command %s', cmd.__class__.__name__)
         if not os.path.exists(sessionfile):
             with open(sessionfile, 'w') as f:
                 json.dump({
                     'username': os.getlogin(),
                     'password': 'fakepass',
                     'endpoint': 'https://localhost:5050/api/v1.0',
-                    'inventory': ''
+                    'inventory': 'test'
                 }, f, indent=4)
             os.chmod(sessionfile, 0o600)
-
-    def prepare_to_run_command(self, cmd):
-        self.LOG.debug('prepare_to_run_command %s', cmd.__class__.__name__)
 
     def clean_up(self, cmd, result, err):
         self.LOG.debug('clean_up %s', cmd.__class__.__name__)

@@ -10,7 +10,6 @@ from prompt_toolkit import prompt
 
 
 sessionfile = os.path.expanduser('~/.ultron_session.json')
-with open(sessionfile) as f: session = AttrDict(json.load(f))
 
 
 class List(Lister):
@@ -19,6 +18,8 @@ class List(Lister):
     log = logging.getLogger(__name__)
 
     def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
         url = '{}/admins'.format(session.endpoint)
         result = requests.get(url, params={'fields': 'name'}, verify=session.certfile,
                               auth=(session.username, session.password))
@@ -46,6 +47,8 @@ class Show(ShowOne):
         return parser
 
     def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
         params = {}
         if len(p.fields) > 0:
             params['fields'] = ','.join(p.fields)
@@ -77,6 +80,8 @@ class New(Command):
         return parser
 
     def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
         if len(p.admins) == 0:
             adminnames = prompt('Enter usernames and press ESC+ENTER\n> ', multiline=True).split()
         else:
@@ -126,6 +131,8 @@ class Update(Command):
         return parser
 
     def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
         data = {}
         if len(p.admins) > 0:
             data['adminnames'] = ','.join(p.admins)
@@ -169,6 +176,8 @@ class Delete(Command):
         return parser
 
     def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
         data = {}
         if len(p.admins) > 0:
             data['adminnames'] = ','.join(p.admins)
@@ -198,11 +207,15 @@ class ListTasks(Lister):
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
         parser = super(ListTasks, self).get_parser(prog_name)
-        parser.add_argument('admin')
+        parser.add_argument('-A', '--admin', default=session.username)
         return parser
 
     def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
         params = {'dynfields': 'allowed_tasks', 'fields': 'name'}
 
         url = '{}/admins/{}'.format(session.endpoint, p.admin)
@@ -225,11 +238,15 @@ class ListInventories(Lister):
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
         parser = super(ListInventories, self).get_parser(prog_name)
-        parser.add_argument('admin')
+        parser.add_argument('-A', '--admin', default=session.username)
         return parser
 
     def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
         params = {'dynfields': 'inventories', 'fields': 'name'}
 
         url = '{}/admins/{}'.format(session.endpoint, p.admin)

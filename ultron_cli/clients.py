@@ -10,7 +10,6 @@ from prompt_toolkit import prompt
 
 
 sessionfile = os.path.expanduser('~/.ultron_session.json')
-with open(sessionfile) as f: session = AttrDict(json.load(f))
 
 
 class List(Lister):
@@ -19,12 +18,14 @@ class List(Lister):
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
         parser = super(List, self).get_parser(prog_name)
         parser.add_argument('-A', '--admin', default=session.username)
         parser.add_argument('-I', '--inventory', default=session.inventory)
         return parser
 
     def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
         url = '{}/clients/{}/{}'.format(session.endpoint, p.admin, p.inventory)
         result = requests.get(url, params={'fields': 'name'}, verify=session.certfile,
                               auth=(session.username, session.password))
@@ -45,6 +46,7 @@ class Show(ShowOne):
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
         parser = super(Show, self).get_parser(prog_name)
         parser.add_argument('client')
         parser.add_argument('-A', '--admin', default=session.username)
@@ -54,6 +56,7 @@ class Show(ShowOne):
         return parser
 
     def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
         params = {}
         if len(p.fields) > 0:
             params['fields'] = ','.join(p.fields)
@@ -77,6 +80,7 @@ class New(Command):
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
         parser = super(New, self).get_parser(prog_name)
         parser.add_argument('clients', nargs='*', default=[])
         parser.add_argument('-A', '--admin', default=session.username)
@@ -85,6 +89,7 @@ class New(Command):
         return parser
 
     def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
         if len(p.clients) == 0:
             clientnames = prompt('Enter hostnames and press ESC+ENTER\n> ', multiline=True).split()
         else:
@@ -123,6 +128,7 @@ class Update(Command):
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
         parser = super(Update, self).get_parser(prog_name)
         parser.add_argument('clients', nargs='*', default=[])
         parser.add_argument('-A', '--admin', default=session.username)
@@ -131,6 +137,7 @@ class Update(Command):
         return parser
 
     def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
         data = {}
         if len(p.clients) > 0:
             data = {'clientnames': ','.join(set(p.clients))}
@@ -167,6 +174,7 @@ class Delete(Command):
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
         parser = super(Delete, self).get_parser(prog_name)
         parser.add_argument('clients', nargs='*', default=[])
         parser.add_argument('-A', '--admin', default=session.username)
@@ -174,6 +182,7 @@ class Delete(Command):
         return parser
 
     def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
         data = {}
         if len(p.clients) > 0:
             data = {'clientnames': ','.join(set(p.clients))}
@@ -193,6 +202,53 @@ class Delete(Command):
 
         if result.status_code == requests.codes.ok:
             print('SUCCESS: Deleted clients')
+            return
+        raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+
+class Perform(Command):
+    "Perform a task on all/selected clients in inventory"
+
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+        parser = super(Perform, self).get_parser(prog_name)
+        parser.add_argument('task')
+        parser.add_argument('clients',  nargs='*', default=[])
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
+        parser.add_argument('-S', '--synchronous', action='store_true')
+        parser.add_argument('-K', '--kwargs', type=json.loads, help='BSON encoded key-value pairs', default={})
+        return parser
+
+    def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+        data = {'async': int(not p.synchronous), 'task': p.task}
+
+        if len(p.clients) > 0:
+            data['clientnames'] = ','.join(set(p.clients))
+
+        if len(p.kwargs) > 0:
+            if not isinstance(p.kwargs, dict):
+                raise RuntimeError('kwargs: Must be BSON encoded key-value pairs')
+            data['kwargs'] = json.dumps(p.kwargs)
+
+
+        url = '{}/clients/{}/{}'.format(session.endpoint, p.admin, p.inventory)
+
+        # Validate no extra clients
+        if len(p.clients) > 0:
+            result = requests.get(url, params={'clientnames': data['clientnames'], 'fields': 'name'},
+                                  verify=session.certfile)
+            clients = result.json().get('result')
+            if len(clients) != len(p.clients):
+                raise RuntimeError('ERROR: Clients not found: {}'.format(', '.join(set(set(p.clients)-clients.keys()))))
+
+        result = requests.post(url, data=data, verify=session.certfile,
+                               auth=(session.username, session.password))
+
+        if result.status_code == requests.codes.ok:
+            print('SUCCESS: Submitted task')
             return
         raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
 
