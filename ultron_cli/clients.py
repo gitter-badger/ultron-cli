@@ -27,15 +27,15 @@ class List(Lister):
     def take_action(self, p):
         with open(sessionfile) as f: session = AttrDict(json.load(f))
         url = '{}/clients/{}/{}'.format(session.endpoint, p.admin, p.inventory)
-        result = requests.get(url, params={'fields': 'name'}, verify=session.certfile,
-                              auth=(session.username, session.password))
+        result = requests.get(url, params={'fields': 'name', 'dynfields': 'groups'},
+                verify=session.certfile, auth=(session.username, session.password))
 
         if result.status_code == requests.codes.ok:
             clients = result.json().get('result', {})
             if len(clients) == 0:
                 raise RuntimeError('ERROR: Clients not found')
-            cols = ['name']
-            rows = [[x] for x in clients.keys()]
+            cols = ['name', 'groups']
+            rows = [[x['name'], ', '.join(x['groups'])] for x in clients.values()]
             return [cols, rows]
         raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
 

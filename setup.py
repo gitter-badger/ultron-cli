@@ -62,26 +62,28 @@ setup(
 
             'new admins = ultron_cli.admins:New',
             'list admins = ultron_cli.admins:List',
-            'show admin = ultron_cli.admins:Show',
             'update admins = ultron_cli.admins:Update',
             'delete admins = ultron_cli.admins:Delete',
+            'show admin = ultron_cli.admins:Show',
 
             'list tasks = ultron_cli.admins:ListTasks',
             'list inventories = ultron_cli.admins:ListInventories',
 
             'new groups = ultron_cli.groups:New',
             'list groups = ultron_cli.groups:List',
-            'show group = ultron_cli.groups:Show',
             'update groups = ultron_cli.groups:Update',
             'delete groups = ultron_cli.groups:Delete',
-            'group perform = ultron_cli.groups:Perform',
+            'show group = ultron_cli.groups:Show',
+            'perform on group = ultron_cli.groups:Perform',
+            'append clients to group = ultron_cli.groups:AppendClients',
+            'remove clients from group = ultron_cli.groups:RemoveClients',
 
             'new clients = ultron_cli.clients:New',
             'list clients = ultron_cli.clients:List',
-            'show client = ultron_cli.clients:Show',
             'update clients = ultron_cli.clients:Update',
             'delete clients = ultron_cli.clients:Delete',
-            'clients perform = ultron_cli.clients:Perform'
+            'perform on clients = ultron_cli.clients:Perform',
+            'show client = ultron_cli.clients:Show'
         ]
     },
 

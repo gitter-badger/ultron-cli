@@ -27,15 +27,15 @@ class List(Lister):
     def take_action(self, p):
         with open(sessionfile) as f: session = AttrDict(json.load(f))
         url = '{}/groups/{}/{}'.format(session.endpoint, p.admin, p.inventory)
-        result = requests.get(url, params={'fields': 'name'}, verify=session.certfile,
-                              auth=(session.username, session.password))
+        result = requests.get(url, params={'fields': 'name', 'dynfields': 'count_clients'},
+                verify=session.certfile, auth=(session.username, session.password))
 
         if result.status_code == requests.codes.ok:
             groups = result.json().get('result', {})
             if len(groups) == 0:
                 raise RuntimeError('ERROR: Groups not found')
-            cols = ['name']
-            rows = [[x] for x in groups.keys()]
+            cols = ['name', 'count_clients']
+            rows = [[x['name'], x['count_clients']] for x in groups.values()]
             return [cols, rows]
         raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
 
@@ -51,6 +51,7 @@ class Show(ShowOne):
         parser.add_argument('-A', '--admin', default=session.username)
         parser.add_argument('-I', '--inventory', default=session.inventory)
         parser.add_argument('-F', '--fields', nargs='*', default=[])
+        parser.add_argument('-D', '--dynfields', nargs='*', default=[])
         return parser
 
     def take_action(self, p):
@@ -58,6 +59,9 @@ class Show(ShowOne):
         params = {}
         if len(p.fields) > 0:
             params['fields'] = ','.join(p.fields)
+
+        if len(p.dynfields) > 0:
+            params['dynfields'] = ','.join(p.dynfields)
 
         url = '{}/groups/{}/{}/{}'.format(session.endpoint, p.admin, p.inventory, p.group)
         result = requests.get(url, params=params, verify=session.certfile)
@@ -81,7 +85,6 @@ class New(Command):
         parser.add_argument('groups', nargs='*', default=[])
         parser.add_argument('-A', '--admin', default=session.username)
         parser.add_argument('-I', '--inventory', default=session.inventory)
-        parser.add_argument('-C', '--clients', nargs='*')
         parser.add_argument('-D', '--description', default='')
         parser.add_argument('-P', '--props', nargs='*', default=[])
         return parser
@@ -95,8 +98,7 @@ class New(Command):
 
         data = {
             'groupnames': ','.join(set(groupnames)), ''
-            'description': p.description,
-            'clientnames': p.clients
+            'description': p.description
         }
         if len(p.props) > 0:
             try:
@@ -135,8 +137,6 @@ class Update(Command):
         parser.add_argument('groups', nargs='*', default=[])
         parser.add_argument('-A', '--admin', default=session.username)
         parser.add_argument('-I', '--inventory', default=session.inventory)
-        parser.add_argument('-C', '--clients', nargs='*', default=[])
-        parser.add_argument('-R', '--remove', action='store_true')
         parser.add_argument('-D', '--description', default=None)
         parser.add_argument('-P', '--props', nargs='*', default=[])
         return parser
@@ -146,10 +146,6 @@ class Update(Command):
         data = {}
         if len(p.groups) > 0:
             data['groupnames'] = ','.join(set(p.groups))
-        if len(p.clients) > 0:
-            data['clientnames'] = ','.join(set(p.clients))
-        if p.remove:
-            data['action'] = 'remove'
         if p.description is not None:
             data['description'] = p.description
         if len(p.props) > 0:
@@ -248,6 +244,90 @@ class Perform(Command):
 
         if result.status_code == requests.codes.ok:
             print('SUCCESS: Submitted task')
+            return
+        raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+
+
+class AppendClients(Command):
+    "Append clients to a group"
+
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+        parser = super(AppendClients, self).get_parser(prog_name)
+        parser.add_argument('group')
+        parser.add_argument('clients', nargs='*', default=[])
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
+        return parser
+
+    def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
+        params = {'fields': 'name'}
+        if len(p.clients) > 0:
+            params['clientnames'] = ','.join(p.clients)
+
+        url = '{}/clients/{}/{}'.format(session.endpoint, p.admin, p.inventory)
+        result = requests.get(url, params=params, verify=session.certfile)
+        if result.status_code != requests.codes.ok:
+            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+
+        clients = result.json().get('result', {})
+
+        if len(p.clients) > 0 and len(clients) != len(p.clients):
+            raise RuntimeError('ERROR: Clients not found: {}'.format(', '.join(set(set(p.clients)-clients.keys()))))
+
+        url = '{}/groups/{}/{}/{}'.format(session.endpoint, p.admin, p.inventory, p.group)
+        clientnames = ','.join(clients.keys())
+        result = requests.post(url, data={'clientnames': clientnames}, verify=session.certfile,
+                               auth=(session.username, session.password))
+
+        if result.status_code == requests.codes.ok:
+            print('SUCCESS: Appended clients to group')
+            return
+        raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+
+
+class RemoveClients(Command):
+    "Remove clients from a group"
+
+    log = logging.getLogger(__name__)
+
+    def get_parser(self, prog_name):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+        parser = super(RemoveClients, self).get_parser(prog_name)
+        parser.add_argument('group')
+        parser.add_argument('clients', nargs='*', default=[])
+        parser.add_argument('-A', '--admin', default=session.username)
+        parser.add_argument('-I', '--inventory', default=session.inventory)
+        return parser
+
+    def take_action(self, p):
+        with open(sessionfile) as f: session = AttrDict(json.load(f))
+
+        params = {'fields': 'name'}
+        if len(p.clients) > 0:
+            params['clientnames'] = ','.join(p.clients)
+
+        url = '{}/clients/{}/{}'.format(session.endpoint, p.admin, p.inventory)
+        result = requests.get(url, params=params, verify=session.certfile)
+        if result.status_code != requests.codes.ok:
+            raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
+
+        clients = result.json().get('result', {})
+
+        if len(p.clients) > 0 and len(clients) != len(p.clients):
+            raise RuntimeError('ERROR: Clients not found: {}'.format(', '.join(set(set(p.clients)-clients.keys()))))
+
+        url = '{}/groups/{}/{}/{}'.format(session.endpoint, p.admin, p.inventory, p.group)
+        clientnames = ','.join(clients.keys())
+        result = requests.post(url, data={'clientnames': clientnames, 'action': 'remove'}, verify=session.certfile,
+                               auth=(session.username, session.password))
+
+        if result.status_code == requests.codes.ok:
+            print('SUCCESS: Removed clients from group')
             return
         raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
 

@@ -30,7 +30,8 @@ class UltronCli(App):
                     'username': os.getlogin(),
                     'password': 'fakepass',
                     'endpoint': 'https://localhost:5050/api/v1.0',
-                    'inventory': 'test'
+                    'inventory': 'test',
+                    'certfile': False
                 }, f, indent=4)
             os.chmod(sessionfile, 0o600)
 
