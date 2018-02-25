@@ -1,5 +1,4 @@
-recursive-include ultron *.py
-recursive-include ultron *.pickle
+recursive-include ultron_cli *.py
 include runner README.md
 include runner LICENSE
 include requirements.txt
