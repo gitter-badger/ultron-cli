@@ -1,4 +1,6 @@
 # ultron-cli
+
+[![Join the chat at https://gitter.im/rapidstack/ultron-cli](https://badges.gitter.im/rapidstack/ultron-cli.svg)](https://gitter.im/rapidstack/ultron-cli?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 Command-line interface to interact with Ultron API
 
 ```
