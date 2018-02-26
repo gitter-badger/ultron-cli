@@ -26,7 +26,7 @@ Commands:
   filter client state  List clients filtered by state
   filter client task  List clients filtered by task status
   help           print detailed help for another command (cliff)
-  inventory      Sel default inventory
+  inventory      Get or set default inventory
   list admins    List all admins
   list clients   List all clients in inventory
   list groups    List all groups in inventory
