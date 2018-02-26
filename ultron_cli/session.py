@@ -79,20 +79,20 @@ class Disconnect(Command):
         self.log.info('Disconnected from Ultron API')
 
 class DefaultInventory(Command):
-    "Sel default inventory"
+    "Get or set default inventory"
 
     log = logging.getLogger(__name__)
 
     def get_parser(self, prog_name):
         parser = super(DefaultInventory, self).get_parser(prog_name)
-        parser.add_argument('inventory')
+        parser.add_argument('inventory', nargs='?', default=None)
         return parser
 
     def take_action(self, parsed):
-        if not parsed.inventory:
-            raise RuntimeError('error: inventory: should not be empty')
         with open(sessionfile) as f: session = AttrDict(json.load(f))
+        if not parsed.inventory:
+            print(session.inventory)
+            return
         session['inventory'] = parsed.inventory
-        with open(sessionfile, 'w') as f:
-            json.dump(session, f, indent=4)
+        with open(sessionfile, 'w') as f: json.dump(session, f, indent=4)
         self.log.info('Default inventory is set as: '+session['inventory'])

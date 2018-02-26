@@ -226,8 +226,9 @@ class ListTasks(Lister):
             admin = result.json().get('result',{}).get(p.admin)
             if not admin:
                 raise RuntimeError('ERROR: Admin not found')
-            cols = ['allowed_tasks']
-            rows = [[x] for x in admin['allowed_tasks']]
+            cols = ['task', 'title','plugin', 'kwargs']
+            rows = [[k, v['title'], v['plugin'], v.get('kwargs')] for k,v in admin['allowed_tasks'].items()]
+            rows.sort(key=lambda x: admin['allowed_tasks'][x[0]]['index'])
             return [cols, rows]
         raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
 
@@ -257,7 +258,7 @@ class ListInventories(Lister):
             admin = result.json().get('result',{}).get(p.admin)
             if not admin:
                 raise RuntimeError('ERROR: Admin not found')
-            cols = ['inventories']
-            rows = [[x] for x in admin['inventories']]
+            cols = ['inventory', 'clients', 'groups']
+            rows = [[k, v['clients'], v['groups']] for k,v in admin['inventories'].items()]
             return [cols, rows]
         raise RuntimeError('ERROR: {}: {}'.format(result.status_code, result.json().get('message')))
